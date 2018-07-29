@@ -1,0 +1,119 @@
+{
+  "name": "mq-rpc",
+  "version": "0.0.0-development",
+  "description": "Adbstraction over MQ for RPC service",
+  "main": "dist/index.js",
+  "repository": "git@github.com:CheerlessCloud/mq-rpc.git",
+  "author": "CheerlessCloud <nnsceg@gmail.com>",
+  "license": "MIT",
+  "keywords": [
+    "mq",
+    "rpc",
+    "mq-rpc",
+    "rpc-over-mq"
+  ],
+  "scripts": {
+    "test": "ava",
+    "test:dev": "ava --watch",
+    "test:debug": "node --inspect --inspect-brk --require babel-register node_modules/ava/profile.js ",
+    "test:cover": "nyc ava",
+    "posttest:cover": "nyc report --reporter=lcov",
+    "report-coverage": "catw coverage/lcov.info | coveralls",
+    "flow:check": "flow check",
+    "lint": "eslint --ext .json,.js ./src",
+    "lint:fix": "eslint --ext .json,.js --fix ./src",
+    "prebuild": "rimraf ./dist",
+    "build": "babel src -d ./dist -s --ignore test.js",
+    "postbuild": "flow-copy-source -v -i *.test.js src dist",
+    "semantic-release": "semantic-release pre && npm publish && semantic-release post",
+    "precommit": "lint-staged"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@bubltechnology/customizable-commit-analyzer": "^1.0.1",
+    "ava": "^0.25.0",
+    "babel-cli": "^6.26.0",
+    "babel-eslint": "^8.2.6",
+    "babel-plugin-transform-flow-strip-types": "^6.22.0",
+    "babel-preset-env": "^1.7.0",
+    "babel-register": "^6.26.0",
+    "catw": "^1.0.1",
+    "coveralls": "^3.0.2",
+    "eslint": "^4.19.1",
+    "eslint-config-airbnb-base": "^12.1.0",
+    "eslint-plugin-flowtype": "^2.50.0",
+    "eslint-plugin-import": "^2.13.0",
+    "eslint-plugin-json": "^1.2.0",
+    "flow-bin": "^0.69.0",
+    "flow-copy-source": "^2.0.2",
+    "husky": "^0.14.3",
+    "lint-staged": "^7.2.0",
+    "nyc": "^12.0.2",
+    "rimraf": "^2.6.2",
+    "semantic-release": "^15.8.1",
+    "travis-deploy-once": "^5.0.1"
+  },
+  "engines": {
+    "node": ">=6.10.0"
+  },
+  "babel": {
+    "retainLines": true,
+    "presets": [
+      [
+        "env",
+        {
+          "targets": {
+            "node": "6.10"
+          },
+          "useBuiltIns": "usage",
+          "shippedProposals": true,
+          "loose": true
+        }
+      ]
+    ],
+    "plugins": [
+      "transform-flow-strip-types"
+    ]
+  },
+  "ava": {
+    "files": [
+      "src/**/*.test.js",
+      "test/**/*.js"
+    ],
+    "source": [
+      "src/*"
+    ],
+    "verbose": true,
+    "require": [
+      "babel-register"
+    ],
+    "babel": "inherit"
+  },
+  "release": {
+    "analyzeCommits": "@bubltechnology/customizable-commit-analyzer"
+  },
+  "config": {
+    "commitTypeMap": {
+      "feat": "minor",
+      "fix": "patch",
+      "docs": "null",
+      "style": "null",
+      "refactor": "patch",
+      "perf": "patch",
+      "test": "null",
+      "build": "patch",
+      "ci": "null",
+      "chore": "null"
+    }
+  },
+  "lint-staged": {
+    "*.{js, json}": [
+      "eslint --ext .json,.js --fix",
+      "git add"
+    ]
+  },
+  "files": [
+    "dist/**/*.*",
+    "!dist/**/*.test.*"
+  ]
+}
