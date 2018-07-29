@@ -28,7 +28,9 @@
     "semantic-release": "semantic-release pre && npm publish && semantic-release post",
     "precommit": "lint-staged"
   },
-  "dependencies": {},
+  "dependencies": {
+    "amqplib": "^0.5.2"
+  },
   "devDependencies": {
     "@bubltechnology/customizable-commit-analyzer": "^1.0.1",
     "ava": "^0.25.0",
