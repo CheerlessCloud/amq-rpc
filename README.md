@@ -1,22 +1,19 @@
 # AMQ RPC
 
-[![Commitizen friendly](https://img.shields.io/badge/commitizen-friendly-brightgreen.svg)](http://commitizen.github.io/cz-cli/)
+[![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)](https://github.com/semantic-release/semantic-release)
 [![FlowJS](https://img.shields.io/badge/flow-v0.69-yellow.svg)](https://flow.org/en/)
 [![Build Status](https://travis-ci.org/CheerlessCloud/amq-rpc.svg?branch=master)](https://travis-ci.org/CheerlessCloud/amq-rpc)
 [![Coverage Status](https://coveralls.io/repos/github/CheerlessCloud/amq-rpc/badge.svg?branch=master)](https://coveralls.io/github/CheerlessCloud/amq-rpc?branch=master)
 
-[![Greenkeeper badge](https://badges.greenkeeper.io/CheerlessCloud/amq-rpc.svg)](https://greenkeeper
-.io/)
-[![dependencies Status](https://david-dm.org/CheerlessCloud/amq-rpc/status.svg)](https://david-dm
-.org/CheerlessCloud/amq-rpc)
+[![Greenkeeper badge](https://badges.greenkeeper.io/CheerlessCloud/amq-rpc.svg)](https://greenkeeper.io/)
+[![dependencies Status](https://david-dm.org/CheerlessCloud/amq-rpc/status.svg)](https://david-dm.org/CheerlessCloud/amq-rpc)
 [![devDependencies Status](https://david-dm.org/CheerlessCloud/amq-rpc/dev-status.svg)](https://david-dm.org/CheerlessCloud/amq-rpc?type=dev)
 
 [![npm](https://img.shields.io/npm/v/amq-rpc.svg)]()
 [![node](https://img.shields.io/node/v/amq-rpc.svg)]()
 [![MIT License](https://img.shields.io/npm/l/amq-rpc.svg)]()
 
-[![NPM](https://nodei.co/npm/amq-rpc.png?downloads=true&downloadRank=true&stars=true)](https://nodei
-.co/npm/eerror/)
+[![NPM](https://nodei.co/npm/amq-rpc.png?downloads=true&downloadRank=true&stars=true)](https://nodei.co/npm/eerror/)
 
 
 > **Attention, module currently in active development ⚠️**<br>**Soon to be released, maybe around
