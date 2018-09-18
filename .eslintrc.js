@@ -2,7 +2,8 @@ module.exports = {
   "root": true,
   "extends": [
     "eslint-config-airbnb-base",
-    "plugin:flowtype/recommended"
+    "plugin:flowtype/recommended",
+    "plugin:prettier/recommended",
   ],
   "parser": "babel-eslint",
   "parserOptions": {
@@ -30,11 +31,15 @@ module.exports = {
     "no-restricted-syntax": "off",
     "max-len": [
       "error",
-      100
-    ]
+      120,
+    ],
+    "consistent-return": "off",
+    "no-underscore-dangle": "off",
+    "class-methods-use-this": "off",
+    "import/no-named-as-default-member": "off",
   },
   "plugins": [
-    "json",
-    "flowtype"
+    "flowtype",
+    "prettier",
   ]
-}
+};

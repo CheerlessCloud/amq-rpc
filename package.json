@@ -1,15 +1,16 @@
 {
-  "name": "mq-rpc",
+  "name": "amq-rpc",
   "version": "0.0.0-development",
   "description": "Adbstraction over MQ for RPC service",
   "main": "dist/index.js",
-  "repository": "git@github.com:CheerlessCloud/mq-rpc.git",
+  "repository": "git@github.com:CheerlessCloud/amq-rpc.git",
   "author": "CheerlessCloud <nnsceg@gmail.com>",
   "license": "MIT",
   "keywords": [
     "mq",
     "rpc",
-    "mq-rpc",
+    "amq-rpc",
+    "rabbitmq",
     "rpc-over-mq"
   ],
   "scripts": {
@@ -29,13 +30,19 @@
     "precommit": "lint-staged"
   },
   "dependencies": {
-    "amqplib": "^0.5.2"
+    "amqplib": "^0.5.2",
+    "eerror": "^2.0.0",
+    "lodash.merge": "^4.6.1",
+    "p-event": "^2.1.0",
+    "p-timeout": "^2.0.1",
+    "uuid": "^3.3.2"
   },
   "devDependencies": {
     "@bubltechnology/customizable-commit-analyzer": "^1.0.1",
     "ava": "^0.25.0",
     "babel-cli": "^6.26.0",
     "babel-eslint": "^8.2.6",
+    "babel-plugin-transform-class-properties": "^6.24.1",
     "babel-plugin-transform-flow-strip-types": "^6.22.0",
     "babel-preset-env": "^1.7.0",
     "babel-register": "^6.26.0",
@@ -43,20 +50,22 @@
     "coveralls": "^3.0.2",
     "eslint": "^4.19.1",
     "eslint-config-airbnb-base": "^12.1.0",
+    "eslint-config-prettier": "^3.0.1",
     "eslint-plugin-flowtype": "^2.50.0",
     "eslint-plugin-import": "^2.13.0",
-    "eslint-plugin-json": "^1.2.0",
+    "eslint-plugin-prettier": "^2.6.2",
     "flow-bin": "^0.69.0",
     "flow-copy-source": "^2.0.2",
     "husky": "^0.14.3",
     "lint-staged": "^7.2.0",
     "nyc": "^12.0.2",
+    "prettier": "1.14.2",
     "rimraf": "^2.6.2",
     "semantic-release": "^15.8.1",
     "travis-deploy-once": "^5.0.1"
   },
   "engines": {
-    "node": ">=6.10.0"
+    "node": ">=8.4.0"
   },
   "babel": {
     "retainLines": true,
@@ -65,7 +74,7 @@
         "env",
         {
           "targets": {
-            "node": "6.10"
+            "node": "8.4"
           },
           "useBuiltIns": "usage",
           "shippedProposals": true,
@@ -74,6 +83,13 @@
       ]
     ],
     "plugins": [
+      "syntax-object-rest-spread",
+      [
+        "transform-class-properties",
+        {
+          "spec": true
+        }
+      ],
       "transform-flow-strip-types"
     ]
   },
@@ -109,8 +125,9 @@
     }
   },
   "lint-staged": {
-    "*.{js, json}": [
+    "*.{js,json,md}": [
       "eslint --ext .json,.js --fix",
+      "prettier --write",
       "git add"
     ]
   },

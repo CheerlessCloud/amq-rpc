@@ -6,8 +6,10 @@ test
 
 [libs]
 flow-typed
+custom-flow-typings
 
 [lints]
+all=warn
 
 [options]
 
