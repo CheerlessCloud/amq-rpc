@@ -2,17 +2,14 @@
 
 [![Commitizen friendly](https://img.shields.io/badge/commitizen-friendly-brightgreen.svg)](http://commitizen.github.io/cz-cli/)
 [![FlowJS](https://img.shields.io/badge/flow-v0.69-yellow.svg)](https://flow.org/en/)
-[![Build Status](https://travis-ci.org/CheerlessCloud/amq-rpc.svg?branch=master)]
-(https://travis-ci.org/CheerlessCloud/amq-rpc)
-[![Coverage Status](https://coveralls.io/repos/github/CheerlessCloud/amq-rpc/badge.svg?branch=master)]
-(https://coveralls.io/github/CheerlessCloud/amq-rpc?branch=master)
+[![Build Status](https://travis-ci.org/CheerlessCloud/amq-rpc.svg?branch=master)](https://travis-ci.org/CheerlessCloud/amq-rpc)
+[![Coverage Status](https://coveralls.io/repos/github/CheerlessCloud/amq-rpc/badge.svg?branch=master)](https://coveralls.io/github/CheerlessCloud/amq-rpc?branch=master)
 
 [![Greenkeeper badge](https://badges.greenkeeper.io/CheerlessCloud/amq-rpc.svg)](https://greenkeeper
 .io/)
 [![dependencies Status](https://david-dm.org/CheerlessCloud/amq-rpc/status.svg)](https://david-dm
 .org/CheerlessCloud/amq-rpc)
-[![devDependencies Status](https://david-dm.org/CheerlessCloud/amq-rpc/dev-status.svg)]
-(https://david-dm.org/CheerlessCloud/amq-rpc?type=dev)
+[![devDependencies Status](https://david-dm.org/CheerlessCloud/amq-rpc/dev-status.svg)](https://david-dm.org/CheerlessCloud/amq-rpc?type=dev)
 
 [![npm](https://img.shields.io/npm/v/amq-rpc.svg)]()
 [![node](https://img.shields.io/node/v/amq-rpc.svg)]()
