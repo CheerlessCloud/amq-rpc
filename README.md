@@ -1,6 +1,7 @@
 # AMQ RPC
 
 [![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)](https://github.com/semantic-release/semantic-release)
+[![Conventional Changelog](https://img.shields.io/badge/changelog-conventional-brightgreen.svg)](https://github.com/conventional-changelog/conventional-changelog/tree/master/packages/conventional-changelog-angular)
 [![FlowJS](https://img.shields.io/badge/flow-v0.69-yellow.svg)](https://flow.org/en/)
 [![Build Status](https://travis-ci.org/CheerlessCloud/amq-rpc.svg?branch=master)](https://travis-ci.org/CheerlessCloud/amq-rpc)
 [![Coverage Status](https://coveralls.io/repos/github/CheerlessCloud/amq-rpc/badge.svg?branch=master)](https://coveralls.io/github/CheerlessCloud/amq-rpc?branch=master)
