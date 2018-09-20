@@ -47,3 +47,52 @@ test('test merging minimal arguments', t => {
     },
   );
 });
+
+test('merge object params and defaults', t => {
+  t.deepEqual(
+    mergeConnectParams(
+      {
+        someAdditionalArg: 'true',
+        socket: { noDelay: true },
+      },
+      {
+        protocol: 'amqp',
+        socket: {
+          passphrase: '42',
+        },
+      },
+    ),
+    {
+      hostname: 'localhost',
+      protocol: 'amqp',
+      port: 5672,
+      socket: { noDelay: true, passphrase: '42' },
+      someAdditionalArg: 'true',
+    },
+  );
+});
+
+test('merge object params and defaults with url', t => {
+  t.deepEqual(
+    mergeConnectParams(
+      {
+        someAdditionalArg: 'true',
+        socket: { noDelay: true },
+      },
+      {
+        url: 'amqps://guest:guest@localhost:5567?vhost=/',
+      },
+    ),
+    {
+      hostname: 'localhost',
+      protocol: 'amqps',
+      port: '5567',
+      socket: { noDelay: true },
+      someAdditionalArg: 'true',
+      url: 'amqps://guest:guest@localhost:5567?vhost=/',
+      username: 'guest',
+      password: 'guest',
+      vhost: '/',
+    },
+  );
+});
