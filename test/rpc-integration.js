@@ -55,6 +55,40 @@ test('service and client basic integration', async t => {
   await client.destroy();
 });
 
+// @todo refactor this suite, because asynchronous execution pipeline is too entangled
+test('send payload to service without wait response', async t => {
+  t.plan(4);
+  const { client, service } = t.context;
+  await client.ensureConnection();
+  await service.ensureConnection();
+
+  const payload = { foo: 'bar' };
+  const reply = { bar: 'foo' };
+
+  let handlerIsExecuted = false;
+  let sendIsReturnedResult = false;
+  let onHandleExecuted = () => {};
+
+  await service.setFunctionalHandler(async receivedPayload => {
+    t.deepEqual(receivedPayload, payload);
+    t.is(sendIsReturnedResult, true);
+    handlerIsExecuted = true;
+    onHandleExecuted();
+    return reply;
+  });
+
+  const callResult = await client.sendWithoutWaitResponse(payload);
+  sendIsReturnedResult = true;
+  t.is(callResult, undefined);
+  t.is(handlerIsExecuted, false);
+  await new Promise(resolve => {
+    onHandleExecuted = resolve;
+  });
+
+  await service.destroy();
+  await client.destroy();
+});
+
 test('class-based handler for service ', async t => {
   t.plan(2);
   const { client, service } = t.context;
