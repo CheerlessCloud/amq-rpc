@@ -118,17 +118,21 @@ class RpcService extends AdapterConsumer {
   async _classMessageHandler(message: IMessage) {
     const { type: action = 'default' } = message._props;
     const RpcServiceHandler = this._handlers.get(action);
+    const mustRequeue = !message._props.redelivered;
 
     if (!RpcServiceHandler) {
-      await message.reject(!message._props.redelivered);
-      this._errorHandler(
-        new EError('Handler for action not found').combine({
-          action,
-          handlers: this._handlers,
-          messageId: message.id,
-          requeue: !message._props.redelivered,
-        }),
-      );
+      await message.reject(mustRequeue);
+      const error = new EError('Handler for action not found').combine({
+        action,
+        messageId: message.id,
+        requeue: mustRequeue,
+      });
+      this._errorHandler(error);
+
+      if (!mustRequeue) {
+        await this._reply(message, null, error);
+      }
+
       return;
     }
 
@@ -136,7 +140,16 @@ class RpcService extends AdapterConsumer {
     try {
       handler = new RpcServiceHandler({ service: this, message });
     } catch (err) {
-      await message.reject(!message._props.redelivered);
+      await message.reject(mustRequeue);
+      const error = new EError('Error on construct class handler').combine({
+        action,
+        messageId: message.id,
+        requeue: mustRequeue,
+      });
+      this._errorHandler(error);
+      if (!mustRequeue) {
+        await this._reply(message, null, error);
+      }
       return;
     }
 
