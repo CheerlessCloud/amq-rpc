@@ -42,14 +42,29 @@ class RpcService extends AdapterConsumer {
     this._setConnectParams(connectParams);
   }
 
-  async _reply(message: IMessage, payload: Object) {
+  async _reply(message: IMessage, payload: ?Object = null, error: ?Error = null) {
     const { messageId, correlationId, replyTo } = message._props;
     if (!replyTo) {
       return;
     }
 
+    let errorObj = null;
+    if (error) {
+      errorObj = {};
+      Object.getOwnPropertyNames(error).forEach(key => {
+        (errorObj: any)[key] = (error: any)[key];
+      });
+    }
+
     const adapter = this._getAdapter();
-    await adapter.send(replyTo, payload, { messageId, correlationId });
+    await adapter.send(
+      replyTo,
+      {
+        error: errorObj,
+        payload,
+      },
+      { messageId, correlationId },
+    );
   }
 
   async _addSubscriber(handler: IMessage => Promise<any> | any) {
@@ -99,6 +114,7 @@ class RpcService extends AdapterConsumer {
     }
   }
 
+  // @todo merge _classMessageHandler and _functionalMessageHandler and extract to class
   async _classMessageHandler(message: IMessage) {
     const { type: action = 'default' } = message._props;
     const RpcServiceHandler = this._handlers.get(action);
@@ -129,24 +145,12 @@ class RpcService extends AdapterConsumer {
       await handler.beforeHandle();
       const replyPayload = await handler.handle();
       await handler.afterHandle();
-      await this._reply(message, {
-        error: null,
-        payload: replyPayload,
-      });
+      await this._reply(message, replyPayload);
       isSuccess = true;
       await handler.onSuccess();
     } catch (err) {
+      await this._reply(message, null, err);
       await handler.onFail(err);
-      const error = {};
-
-      Object.getOwnPropertyNames(err).forEach(key => {
-        error[key] = err[key];
-      });
-
-      await this._reply(message, {
-        error,
-        payload: null,
-      });
     } finally {
       try {
         if (isSuccess) {
@@ -175,22 +179,10 @@ class RpcService extends AdapterConsumer {
     try {
       const { payload } = message;
       const replyPayload = await handler(payload, message);
-      await this._reply(message, {
-        error: null,
-        payload: replyPayload,
-      });
+      await this._reply(message, replyPayload);
       isSuccess = true;
     } catch (err) {
-      const error = {};
-
-      Object.getOwnPropertyNames(err).forEach(key => {
-        error[key] = err[key];
-      });
-
-      await this._reply(message, {
-        error,
-        payload: null,
-      });
+      await this._reply(message, null, err);
     } finally {
       try {
         if (isSuccess) {
