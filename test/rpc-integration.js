@@ -154,3 +154,33 @@ test('correct pass error from service', async t => {
   await service.destroy();
   await client.destroy();
 });
+
+test('throw error to client on not found action', async t => {
+  t.plan(3);
+  const { client, service } = t.context;
+
+  await client.ensureConnection();
+  await service.ensureConnection();
+
+  await service.addHandler(
+    class extends RpcServiceHandler {
+      get action() {
+        return 'myAction';
+      }
+
+      async handle() {
+        t.fail("hmmm, it's impossible!");
+      }
+    },
+  );
+
+  // after first error reject message with requeue
+  service.setErrorHandler(err => {
+    t.is(err.message, 'Handler for action not found');
+  });
+
+  await t.throws(client.call('undefinedAction', { foo: '42' }), 'Handler for action not found');
+
+  await service.destroy();
+  await client.destroy();
+});
