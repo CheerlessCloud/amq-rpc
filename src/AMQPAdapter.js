@@ -134,7 +134,7 @@ class AMQPAdapter {
   }
 
   async _waitReady(timeout: ?number = 10 * 1000): Promise<Channel> {
-    if (this._state === 'connected') {
+    if (['connected', 'disconnecting'].includes(this._state)) {
       return this._channel;
     }
 
