@@ -50,3 +50,28 @@ test('throw error on undefined handler function at subscribe', async t => {
 
   await t.throws(adapter.subscribe(queue, { noAck: true }), 'Handler must be function');
 });
+
+// @todo refactor me please, I have so ugly execution plan 😱
+test('resend after return false from send method', async t => {
+  t.plan(2);
+  const { adapter, queue } = t.context;
+  await adapter.ensureQueue({ name: queue });
+
+  let tryCount = 0;
+  adapter._channel.sendToQueue = () => {
+    tryCount += 1;
+    return !!(tryCount - 1);
+  };
+
+  adapter._eventBus.on('bufferOverflow', () => {
+    t.is(tryCount, 1);
+    setTimeout(() => {
+      adapter._channel.emit('drain');
+    }, 10);
+  });
+
+  const sendPromise = adapter.send(queue, { foo: 42 });
+  await sendPromise;
+
+  t.is(tryCount, 2);
+});
