@@ -1,6 +1,7 @@
 /* eslint-disable no-param-reassign */
 import test from 'ava';
 import uuid from 'uuid/v4';
+import EError from 'eerror';
 import RpcClient from '../src/Client';
 import RpcService from '../src/Service';
 import RpcServiceHandler from '../src/RpcServiceHandler';
@@ -89,7 +90,7 @@ test('send payload to service without wait response', async t => {
   await client.destroy();
 });
 
-test('class-based handler for service ', async t => {
+test('class-based handler for service', async t => {
   t.plan(2);
   const { client, service } = t.context;
 
@@ -114,6 +115,41 @@ test('class-based handler for service ', async t => {
 
   const callResult = await client.call('myAction', payload);
   t.deepEqual(callResult, reply);
+
+  await service.destroy();
+  await client.destroy();
+});
+
+test('correct pass error from service', async t => {
+  t.plan(6);
+  const { client, service } = t.context;
+
+  await client.ensureConnection();
+  await service.ensureConnection();
+  const payload = { bar: 'foo' };
+  const error = new EError('my awesome error').combine({
+    foo: 42,
+    name: 'MyAwesomeError',
+  });
+
+  await service.addHandler(
+    class extends RpcServiceHandler {
+      async handle() {
+        throw EError.wrap(error, this.payload);
+      }
+    },
+  );
+
+  try {
+    await client.send(payload);
+  } catch (err) {
+    t.is(err.name, error.name);
+    t.is(err.message, error.message);
+    t.is(err.foo, error.foo);
+    t.is(err.bar, payload.bar);
+    t.is(err.message, error.message);
+    t.true(err instanceof EError);
+  }
 
   await service.destroy();
   await client.destroy();
