@@ -70,8 +70,7 @@ test('resend after return false from send method', async t => {
     }, 10);
   });
 
-  const sendPromise = adapter.send(queue, { foo: 42 });
-  await sendPromise;
+  await adapter.send(queue, { foo: 42 });
 
   t.is(tryCount, 2);
 });
