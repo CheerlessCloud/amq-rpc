@@ -54,6 +54,7 @@ class AMQPAdapter {
   _eventBus: AMQPAdapterEventBus = (new EventEmitter(): any);
   _inflightHandlers: number = 0;
   _errorHandler: Error => mixed = err => console.error(err);
+  _activeConsumers: string[] = [];
 
   constructor({ connection, channel }: { connection: Connection, channel: Channel }) {
     this._connection = connection;
@@ -170,7 +171,7 @@ class AMQPAdapter {
     queue: string,
     options: ?ConsumeOptions | ((?IMessage) => Promise<any> | any),
     handler: ?(IMessage) => Promise<any> | any,
-  ) {
+  ): Promise<void> {
     if (typeof handler === 'undefined' && typeof options === 'function') {
       handler = options; // eslint-disable-line no-param-reassign
       options = {}; // eslint-disable-line no-param-reassign
@@ -190,7 +191,7 @@ class AMQPAdapter {
 
     const channel: Channel = await this._waitReady();
 
-    await channel.consume(
+    const { consumerTag } = await channel.consume(
       queue,
       async (originalMessage: ?OriginalAMQPMessage) => {
         if (!originalMessage) {
@@ -224,6 +225,13 @@ class AMQPAdapter {
       },
       options || {},
     );
+
+    this._activeConsumers.push(consumerTag);
+  }
+
+  async _unsubscribeAll(timeout: ?number) {
+    const channel: Channel = await this._waitReady(timeout || 10000);
+    await Promise.all(this._activeConsumers.map(consumerTag => channel.cancel(consumerTag)));
   }
 
   setPrefetch(count: number) {
@@ -252,6 +260,8 @@ class AMQPAdapter {
   }
 
   async _waitEndHandlers(gracefulStopTimeout: number) {
+    await this._unsubscribeAll(1000);
+
     if (this._inflightHandlers <= 0) {
       return;
     }
