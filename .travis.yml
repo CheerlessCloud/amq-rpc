@@ -22,6 +22,9 @@ script:
   - npm run flow:check
   - npm run test:cover
   - npm run build
+  - npm run lint
 after_success:
-  - npm run report-coverage
-  - ./node_modules/.bin/travis-deploy-once && npm run semantic-release
+  - if [ "$TRAVIS_BRANCH" == "master" ]; then
+      npm run report-coverage;
+      ./node_modules/.bin/travis-deploy-once && npm run semantic-release;
+    fi
