@@ -25,6 +25,7 @@ export interface IMessage {
 export default class AMQPMessage implements IMessage {
   _channel: AMQPChannel;
   _amqpMessage: CommonAMQPMessage;
+  _isSealed: boolean = false;
 
   constructor(amqpMessage: CommonAMQPMessage, channel: AMQPChannel): IMessage {
     this._channel = channel;
@@ -73,15 +74,29 @@ export default class AMQPMessage implements IMessage {
     return !!this._amqpMessage.properties.replyTo;
   }
 
+  _checkIsSealed() {
+    if (!this._isSealed) {
+      return;
+    }
+
+    throw new Error('Message already acked/rejected or created in sealed mode');
+  }
+
   async ack() {
+    this._checkIsSealed();
     this._channel.ack(this._amqpMessage);
+    this._isSealed = true;
   }
 
   async reject(requeue: ?boolean = false) {
+    this._checkIsSealed();
     this._channel.reject(this._amqpMessage, !!requeue);
+    this._isSealed = true;
   }
 
   async rejectAndRequeue(): Promise<void> {
+    this._checkIsSealed();
     await this.reject(true);
+    this._isSealed = true;
   }
 }
