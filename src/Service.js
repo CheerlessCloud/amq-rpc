@@ -115,7 +115,7 @@ class RpcService extends AdapterConsumer {
   }
 
   // @todo merge _classMessageHandler and _functionalMessageHandler and extract to class
-  async _classMessageHandler(message: IMessage) {
+  async _classMessageHandler(message: IMessage): Promise<void> {
     const { type: action = 'default' } = message._props;
     const RpcServiceHandler = this._handlers.get(action);
     const mustRequeue = !message._props.redelivered;
@@ -156,15 +156,23 @@ class RpcService extends AdapterConsumer {
     let isSuccess = false;
     try {
       await handler.beforeHandle();
+
       const replyPayload = await handler.handle();
-      await handler.afterHandle();
+
       await this._reply(message, replyPayload);
       isSuccess = true;
+
       await handler.onSuccess();
     } catch (err) {
       await this._reply(message, null, err);
       await handler.onFail(err);
     } finally {
+      await handler.afterHandle();
+
+      if (message.isSealed) {
+        return; // eslint-disable-line no-unsafe-finally
+      }
+
       try {
         if (isSuccess) {
           await message.ack();
