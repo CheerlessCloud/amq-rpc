@@ -4,6 +4,7 @@ import RpcService from './Service';
 
 export interface IRpcServiceHandler {
   +action: string;
+  +message: IMessage;
   constructor({ service: RpcService, message: IMessage }): IRpcServiceHandler;
   beforeHandle(): Promise<void> | void;
   handle(): Promise<void> | void;

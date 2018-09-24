@@ -11,12 +11,12 @@ export default class RpcServiceHandler implements IRpcServiceHandler {
   // +required: string[] = [];
 
   +_service: RpcService;
-  +_message: IMessage;
+  +message: IMessage;
   +payload: Object;
 
   constructor({ service, message }: { service: RpcService, message: IMessage }): RpcServiceHandler {
     this._service = service;
-    this._message = message;
+    this.message = message;
     this.payload = message.payload;
     return this;
   }
