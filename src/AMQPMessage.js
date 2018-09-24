@@ -90,19 +90,26 @@ export default class AMQPMessage implements IMessage {
 
   async ack() {
     this._checkIsSealed();
-    this._channel.ack(this._amqpMessage);
-    this._isSealed = true;
+    await this._forceAck();
   }
 
   async reject(requeue: ?boolean = false) {
     this._checkIsSealed();
+    await this._forceReject(requeue);
+  }
+
+  async _forceAck() {
+    this._channel.ack(this._amqpMessage);
+    this._isSealed = true;
+  }
+
+  async _forceReject(requeue: ?boolean = false) {
     this._channel.reject(this._amqpMessage, !!requeue);
     this._isSealed = true;
   }
 
   async rejectAndRequeue(): Promise<void> {
     this._checkIsSealed();
-    await this.reject(true);
-    this._isSealed = true;
+    await this._forceReject(true);
   }
 }
