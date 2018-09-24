@@ -10,6 +10,7 @@ export interface IMessage {
   +id: ?string;
   +correlationId: ?string;
   +payload: Object;
+  +isSealed: boolean;
   +headers: Map<string, mixed>;
   +isAnswerQueueEnabled: boolean;
   +_props: MessageProps;
@@ -27,9 +28,10 @@ export default class AMQPMessage implements IMessage {
   _amqpMessage: CommonAMQPMessage;
   _isSealed: boolean = false;
 
-  constructor(amqpMessage: CommonAMQPMessage, channel: AMQPChannel): IMessage {
+  constructor(amqpMessage: CommonAMQPMessage, channel: AMQPChannel, isSealed: ?boolean): IMessage {
     this._channel = channel;
     this._amqpMessage = amqpMessage;
+    this._isSealed = isSealed || false;
     return this;
   }
 
@@ -43,6 +45,10 @@ export default class AMQPMessage implements IMessage {
 
   get payload(): Object {
     return this.getPayloadAsObject();
+  }
+
+  get isSealed(): boolean {
+    return this._isSealed;
   }
 
   get _props(): MessageProps {
