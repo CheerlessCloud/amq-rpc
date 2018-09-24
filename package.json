@@ -21,8 +21,8 @@
     "posttest:cover": "nyc report --reporter=lcov",
     "report-coverage": "catw coverage/lcov.info | coveralls",
     "flow:check": "flow check",
-    "lint": "eslint --ext .json,.js ./src",
-    "lint:fix": "eslint --ext .json,.js --fix ./src",
+    "lint": "eslint --ext .js ./src ./test",
+    "lint:fix": "eslint --ext .js --fix ./src ./test",
     "prebuild": "rimraf ./dist",
     "build": "babel src -d ./dist -s --ignore test.js",
     "postbuild": "flow-copy-source -v -i *.test.js src dist",
@@ -110,22 +110,40 @@
     "analyzeCommits": {
       "preset": "angular",
       "releaseRules": [
-        {"type": "feat", "release": "minor"},
-        {"type": "fix", "release": "patch"},
-        {"type": "docs", "scope": "/readme/", "release": "patch"},
-        {"type": "perf", "release": "patch"},
-        {"type": "build", "release": "patch"}
+        {
+          "type": "feat",
+          "release": "minor"
+        },
+        {
+          "type": "fix",
+          "release": "patch"
+        },
+        {
+          "type": "docs",
+          "scope": "/readme/",
+          "release": "patch"
+        },
+        {
+          "type": "perf",
+          "release": "patch"
+        },
+        {
+          "type": "build",
+          "release": "patch"
+        }
       ],
       "parserOpts": {
-        "noteKeywords": ["BREAKING CHANGE", "BREAKING CHANGES", "BREAKING"]
+        "noteKeywords": [
+          "BREAKING CHANGE",
+          "BREAKING CHANGES",
+          "BREAKING"
+        ]
       }
     }
   },
   "lint-staged": {
-    "*.{js,json,md}": [
-      "eslint --ext .json,.js --fix",
-      "prettier --write",
-      "git add"
+    "*.{js,md}": [
+      "eslint --ext .js"
     ]
   },
   "files": [
