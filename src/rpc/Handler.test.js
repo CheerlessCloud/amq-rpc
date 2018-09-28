@@ -3,6 +3,8 @@
 import test from 'ava';
 import { spy, stub } from 'sinon';
 import uuid from 'uuid/v4';
+import EError from 'eerror';
+import errorToObject from './errorToObject';
 import Handler from './Handler';
 
 test.beforeEach(t => {
@@ -145,4 +147,74 @@ test('must override handle method', async t => {
       }),
     'You must override handle method',
   );
+});
+
+test('reply just return when no replyTo in message', async t => {
+  const { AwesomeHandler, serviceStub, messageStub } = t.context;
+  const handler = new AwesomeHandler({
+    service: serviceStub,
+    message: {
+      ...messageStub,
+      _props: {
+        ...messageStub._props,
+        replyTo: undefined,
+      },
+    },
+  });
+
+  await t.notThrows(handler.reply({ payload: { foo: 42 } }));
+
+  t.false(t.context.adapterSendStub.calledOnce);
+  t.false(messageStub.ack.calledOnce);
+  t.false(messageStub.reject.calledOnce);
+});
+
+test('reply on success', async t => {
+  const { AwesomeHandler, serviceStub, messageStub, adapterSendStub } = t.context;
+  const {
+    messageStub: { _props: props },
+  } = t.context;
+  const handler = new AwesomeHandler({
+    service: serviceStub,
+    message: messageStub,
+  });
+
+  await t.notThrows(handler.reply({ payload: { foo: 42 } }));
+
+  t.true(adapterSendStub.calledOnce);
+
+  const [queue, payload, options] = adapterSendStub.firstCall.args;
+  t.is(queue, props.replyTo);
+  t.deepEqual(payload, { payload: { foo: 42 }, error: null });
+  t.deepEqual(options, { messageId: props.messageId, correlationId: props.correlationId });
+
+  t.false(messageStub.ack.calledOnce);
+  t.false(messageStub.reject.calledOnce);
+});
+
+test('reply on error', async t => {
+  const { AwesomeHandler, serviceStub, messageStub, adapterSendStub } = t.context;
+  const error = new EError('My awesome error').combine({
+    name: 'AwesomeError',
+    foo: { bar: 42 },
+  });
+  const {
+    messageStub: { _props: props },
+  } = t.context;
+  const handler = new AwesomeHandler({
+    service: serviceStub,
+    message: messageStub,
+  });
+
+  await t.notThrows(handler.reply({ error }));
+
+  t.true(adapterSendStub.calledOnce);
+
+  const [queue, payload, options] = adapterSendStub.firstCall.args;
+  t.is(queue, props.replyTo);
+  t.deepEqual(payload, { payload: null, error: errorToObject(error) });
+  t.deepEqual(options, { messageId: props.messageId, correlationId: props.correlationId });
+
+  t.false(messageStub.ack.calledOnce);
+  t.false(messageStub.reject.calledOnce);
 });
