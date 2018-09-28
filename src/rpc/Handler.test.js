@@ -230,3 +230,20 @@ test('default action name', async t => {
 
   t.is(handler.action, 'default');
 });
+
+test('payload getter', async t => {
+  const { AwesomeHandler, serviceStub, messageStub } = t.context;
+  const payload = { foo: 42, bar: { baz: '11' } };
+  const handler = new AwesomeHandler({
+    service: serviceStub,
+    message: {
+      ...messageStub,
+      get payload(): Object {
+        t.pass();
+        return payload;
+      },
+    },
+  });
+
+  t.deepEqual(handler.payload, payload);
+});
