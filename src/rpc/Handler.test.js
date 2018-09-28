@@ -102,6 +102,38 @@ test('correct reply at positive execute case', async t => {
   t.false(messageStub.reject.called);
 });
 
+test('correct reply when exception throwed in handler', async t => {
+  const { AwesomeHandler, serviceStub, messageStub } = t.context;
+  const error = new Error('My awesome error');
+
+  const handler = new AwesomeHandler({
+    service: serviceStub,
+    message: messageStub,
+  });
+  stub(handler, 'handle').rejects(error);
+
+  const handleSuccessSpy = spy(handler, 'handleSuccess');
+  const handleFailSpy = spy(handler, 'handleFail');
+  const onFailSpy = spy(handler, 'onFail');
+  const replySpy = spy(handler, 'reply');
+
+  await t.notThrows(handler.execute());
+
+  t.false(handleSuccessSpy.called);
+
+  t.true(handleFailSpy.calledOnceWith(error));
+
+  t.true(replySpy.calledOnce);
+  t.deepEqual(replySpy.firstCall.args.pop(), { error });
+  t.true(t.context.adapterSendStub.calledOnce);
+
+  t.false(messageStub.ack.calledOnce);
+  t.true(messageStub.reject.calledOnce);
+
+  t.true(onFailSpy.calledOnce);
+  t.true(onFailSpy.calledAfter(handleFailSpy));
+});
+
 test('must override handle method', async t => {
   const { serviceStub, messageStub } = t.context;
   const HandlerClass = class AwesomeHandler2 extends Handler {};

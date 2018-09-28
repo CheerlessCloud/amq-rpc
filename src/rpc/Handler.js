@@ -47,9 +47,9 @@ export default class RpcHandler {
 
   async handle(): ?Object {}
 
-  handleFail(err: Error) {
-    // reply
-    // reject
+  async handleFail(error: Error) {
+    await this.reply({ error });
+    await this._message.reject();
   }
 
   async handleSuccess(replyPayload: ?Object) {
