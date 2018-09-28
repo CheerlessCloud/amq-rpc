@@ -1,11 +1,11 @@
 // @flow
-export default function errorToObject(error: ?Error): void | Object {
+export default function errorToObject(error: ?Error): null | Object {
   const errorObj = {};
 
   if (error === undefined) {
-    return undefined;
+    return null;
   } else if (error === null) {
-    return undefined;
+    return null;
   }
 
   Object.getOwnPropertyNames(error).forEach(key => {

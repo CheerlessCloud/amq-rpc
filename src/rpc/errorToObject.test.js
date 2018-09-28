@@ -4,11 +4,11 @@ import EError from 'eerror';
 import errorToObject from './errorToObject';
 
 test('call with undefined', t => {
-  t.is(errorToObject(undefined), undefined);
+  t.is(errorToObject(undefined), null);
 });
 
 test('call with null', t => {
-  t.is(errorToObject(null), undefined);
+  t.is(errorToObject(null), null);
 });
 
 test('call with eerror', t => {
