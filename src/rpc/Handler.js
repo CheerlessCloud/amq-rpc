@@ -37,7 +37,7 @@ export default class RpcHandler {
       replyTo,
       {
         error: errorToObject(error),
-        payload,
+        payload: payload === undefined ? null : payload,
       },
       { messageId, correlationId },
     );
