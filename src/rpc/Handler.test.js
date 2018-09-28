@@ -218,3 +218,15 @@ test('reply on error', async t => {
   t.false(messageStub.ack.calledOnce);
   t.false(messageStub.reject.calledOnce);
 });
+
+test('default action name', async t => {
+  const { AwesomeHandler, serviceStub, messageStub } = t.context;
+  t.is(AwesomeHandler.prototype.action, 'default');
+
+  const handler = new AwesomeHandler({
+    service: serviceStub,
+    message: messageStub,
+  });
+
+  t.is(handler.action, 'default');
+});
