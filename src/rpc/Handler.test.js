@@ -171,6 +171,38 @@ test('correct error flow when exception throwed in handleFail', async t => {
   t.false(onFailSpy.calledOnce);
 });
 
+test('correct error flow when exception throwed in afterHandle', async t => {
+  const { AwesomeHandler, serviceStub, messageStub } = t.context;
+  const error = new Error('Error from afterHandle method');
+
+  const handler = new AwesomeHandler({
+    service: serviceStub,
+    message: messageStub,
+  });
+  const afterHandleStub = stub(handler, 'afterHandle').rejects(error);
+
+  const handleSuccessSpy = spy(handler, 'handleSuccess');
+  const onSuccessSpy = spy(handler, 'onSuccess');
+
+  await t.notThrows(handler.execute());
+
+  t.true(afterHandleStub.calledOnceWith(null, t.context.reply));
+  t.true(serviceStub._errorHandler.calledOnce);
+
+  const [finalError] = serviceStub._errorHandler.firstCall.args;
+  t.is(finalError.name, error.name);
+  t.is(finalError.message, error.message);
+  t.is(finalError.stack, error.stack);
+  t.is(finalError.action, handler.action);
+  t.is(finalError.messageId, messageStub.id);
+  t.is(finalError.correlationId, messageStub._props.correlationId);
+
+  t.true(handleSuccessSpy.called);
+  t.true(messageStub.ack.calledOnce);
+  t.false(messageStub.reject.calledOnce);
+  t.true(onSuccessSpy.calledOnceWith(t.context.reply));
+});
+
 test('must override handle method', async t => {
   const { serviceStub, messageStub } = t.context;
   const HandlerClass = class AwesomeHandler2 extends Handler {};
