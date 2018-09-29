@@ -1,8 +1,22 @@
 /* eslint-disable no-empty-function,no-unused-vars */
 // @flow
+import EError from 'eerror';
 import { type IMessage } from '../AMQPMessage';
 import RpcService from '../Service';
 import errorToObject from './errorToObject';
+
+// eslint-disable-next-line no-use-before-define
+function lastErrorHurdle(error: Error, handler: RpcHandler) {
+  const errorCallback = handler._service._errorHandler;
+
+  errorCallback(
+    EError.wrap(error, {
+      action: handler.action,
+      messageId: handler._message.id,
+      correlationId: handler._message._props.correlationId,
+    }),
+  );
+}
 
 export default class RpcHandler {
   +_service: RpcService;
@@ -62,16 +76,26 @@ export default class RpcHandler {
   async afterHandle() {}
 
   async execute() {
+    let handleError = null;
     try {
       await this.beforeHandle();
       const replyPayload = await this.handle();
       await this.handleSuccess(replyPayload);
       await this.onSuccess();
-    } catch (err) {
-      await this.handleFail(err);
-      await this.onFail(err);
+    } catch (error) {
+      handleError = error;
+      try {
+        await this.handleFail(handleError);
+        await this.onFail(handleError);
+      } catch (err) {
+        lastErrorHurdle(EError.wrap(err, { handleError }), this);
+      }
     } finally {
-      await this.afterHandle();
+      try {
+        await this.afterHandle();
+      } catch (err) {
+        lastErrorHurdle(EError.wrap(err, { handleError }), this);
+      }
     }
   }
 }
