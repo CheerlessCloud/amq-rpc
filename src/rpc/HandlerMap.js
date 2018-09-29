@@ -1,11 +1,11 @@
 // @flow
 import EError from 'eerror';
-import IHandler from './IHandler';
+import type { IHandler } from './IHandler';
 
 export default class HandlerMap {
-  _map: Map<string, Class<typeof IHandler>> = new Map();
+  _map: Map<string, Class<IHandler>> = new Map();
 
-  add(handler: Class<typeof IHandler>) {
+  add(handler: Class<IHandler>) {
     const { action, execute } = (handler: any).prototype;
 
     if (!action || typeof execute !== 'function') {
@@ -25,7 +25,7 @@ export default class HandlerMap {
     this._map.set(action, handler);
   }
 
-  get(action: string): ?Class<typeof IHandler> {
+  get(action: string): ?Class<IHandler> {
     return this._map.get(action);
   }
 }
