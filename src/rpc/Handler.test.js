@@ -17,6 +17,7 @@ test.beforeEach(t => {
   };
   t.context.adapterSendStub = stub().resolves(undefined);
   t.context.serviceStub = {
+    _errorHandler: stub(),
     _getAdapter: () => ({
       send: t.context.adapterSendStub,
     }),
@@ -134,6 +135,40 @@ test('correct reply when exception throwed in handler', async t => {
 
   t.true(onFailSpy.calledOnce);
   t.true(onFailSpy.calledAfter(handleFailSpy));
+});
+
+test('correct error flow when exception throwed in handleFail', async t => {
+  const { AwesomeHandler, serviceStub, messageStub } = t.context;
+  const originalError = new Error('Original error from handle method');
+  const error = new Error('Error from handleFail method');
+
+  const handler = new AwesomeHandler({
+    service: serviceStub,
+    message: messageStub,
+  });
+  stub(handler, 'handle').rejects(originalError);
+  stub(handler, 'handleFail').rejects(error);
+
+  const handleSuccessSpy = spy(handler, 'handleSuccess');
+  const onFailSpy = spy(handler, 'onFail');
+
+  await t.notThrows(handler.execute());
+
+  t.true(serviceStub._errorHandler.calledOnce);
+
+  const [finalError] = serviceStub._errorHandler.firstCall.args;
+  t.deepEqual(finalError.handleError, originalError);
+  t.is(finalError.name, error.name);
+  t.is(finalError.message, error.message);
+  t.is(finalError.stack, error.stack);
+  t.is(finalError.action, handler.action);
+  t.is(finalError.messageId, messageStub.id);
+  t.is(finalError.correlationId, messageStub._props.correlationId);
+
+  t.false(handleSuccessSpy.called);
+  t.false(messageStub.ack.calledOnce);
+  t.false(messageStub.reject.calledOnce);
+  t.false(onFailSpy.calledOnce);
 });
 
 test('must override handle method', async t => {
