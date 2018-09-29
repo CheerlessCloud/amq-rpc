@@ -4,6 +4,7 @@ import EError from 'eerror';
 import { type IMessage } from '../AMQPMessage';
 import RpcService from '../Service';
 import errorToObject from './errorToObject';
+import type { IHandler } from './IHandler';
 
 // eslint-disable-next-line no-use-before-define
 function lastErrorHurdle(error: Error, handler: RpcHandler) {
@@ -18,7 +19,7 @@ function lastErrorHurdle(error: Error, handler: RpcHandler) {
   );
 }
 
-export default class RpcHandler {
+export default class RpcHandler implements IHandler {
   +_service: RpcService;
   +_message: IMessage;
   +context: Object = {};
@@ -31,13 +32,15 @@ export default class RpcHandler {
     return this._message.payload;
   }
 
-  constructor({ service, message }: { service: RpcService, message: IMessage }) {
+  constructor({ service, message }: { service: RpcService, message: IMessage }): RpcHandler {
     this._service = service;
     this._message = message;
 
     if (this.handle === RpcHandler.prototype.handle) {
       throw new Error('You must override handle method');
     }
+
+    return this;
   }
 
   async reply({ payload, error }: { payload?: ?Object, error?: Error }) {
