@@ -71,17 +71,19 @@ export default class RpcHandler {
     await this._message.ack();
   }
 
-  async onSuccess() {}
+  async onSuccess(replyPayload: ?Object) {}
   async onFail(error: Error) {}
-  async afterHandle() {}
+  async afterHandle(error: ?Error, replyPayload: ?Object) {}
 
   async execute() {
     let handleError = null;
+    let replyPayload = null;
+
     try {
       await this.beforeHandle();
-      const replyPayload = await this.handle();
+      replyPayload = await this.handle();
       await this.handleSuccess(replyPayload);
-      await this.onSuccess();
+      await this.onSuccess(replyPayload);
     } catch (error) {
       handleError = error;
       try {
@@ -92,7 +94,7 @@ export default class RpcHandler {
       }
     } finally {
       try {
-        await this.afterHandle();
+        await this.afterHandle(handleError, replyPayload);
       } catch (err) {
         lastErrorHurdle(EError.wrap(err, { handleError }), this);
       }
