@@ -44,10 +44,14 @@ test('service and client basic integration', async t => {
   const payload = { foo: 'bar' };
   const reply = { bar: 'foo' };
 
-  await service.setFunctionalHandler(async receivedPayload => {
-    t.deepEqual(receivedPayload, payload);
-    return reply;
-  });
+  await service.addHandler(
+    class extends RpcServiceHandler {
+      async handle() {
+        t.deepEqual(this.payload, payload);
+        return reply;
+      }
+    },
+  );
 
   const callResult = await client.send(payload);
   t.deepEqual(callResult, reply);
@@ -70,13 +74,17 @@ test('send payload to service without wait response', async t => {
   let sendIsReturnedResult = false;
   let onHandleExecuted = () => {};
 
-  await service.setFunctionalHandler(async receivedPayload => {
-    t.deepEqual(receivedPayload, payload);
-    t.is(sendIsReturnedResult, true);
-    handlerIsExecuted = true;
-    onHandleExecuted();
-    return reply;
-  });
+  await service.addHandler(
+    class extends RpcServiceHandler {
+      async handle() {
+        t.deepEqual(this.payload, payload);
+        t.is(sendIsReturnedResult, true);
+        handlerIsExecuted = true;
+        onHandleExecuted();
+        return reply;
+      }
+    },
+  );
 
   const callResult = await client.sendWithoutWaitResponse(payload);
   sendIsReturnedResult = true;
