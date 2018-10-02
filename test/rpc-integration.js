@@ -34,6 +34,18 @@ test.beforeEach(async t => {
   });
 });
 
+test.afterEach(async t => {
+  const { client, service } = t.context;
+
+  if (service.destroy) {
+    await service.destroy();
+  }
+
+  if (client.destroy) {
+    await client.destroy();
+  }
+});
+
 test('service and client basic integration', async t => {
   t.plan(2);
   const { client, service } = t.context;
@@ -55,9 +67,6 @@ test('service and client basic integration', async t => {
 
   const callResult = await client.send(payload);
   t.deepEqual(callResult, reply);
-
-  await service.destroy();
-  await client.destroy();
 });
 
 // @todo refactor this suite, because asynchronous execution pipeline is too entangled
@@ -93,9 +102,6 @@ test('send payload to service without wait response', async t => {
   await new Promise(resolve => {
     onHandleExecuted = resolve;
   });
-
-  await service.destroy();
-  await client.destroy();
 });
 
 test('class-based handler for service', async t => {
@@ -123,9 +129,6 @@ test('class-based handler for service', async t => {
 
   const callResult = await client.call('myAction', payload);
   t.deepEqual(callResult, reply);
-
-  await service.destroy();
-  await client.destroy();
 });
 
 test('correct pass error from service', async t => {
@@ -158,13 +161,10 @@ test('correct pass error from service', async t => {
     t.is(err.message, error.message);
     t.true(err instanceof EError);
   }
-
-  await service.destroy();
-  await client.destroy();
 });
 
 test('throw error to client on not found action', async t => {
-  t.plan(3);
+  t.plan(2);
   const { client, service } = t.context;
 
   await client.ensureConnection();
@@ -182,13 +182,10 @@ test('throw error to client on not found action', async t => {
     },
   );
 
-  // after first error reject message with requeue
+  // after first error reject message
   service.setErrorHandler(err => {
     t.is(err.message, 'Handler for action not found');
   });
 
   await t.throws(client.call('undefinedAction', { foo: '42' }), 'Handler for action not found');
-
-  await service.destroy();
-  await client.destroy();
 });
