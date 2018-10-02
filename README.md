@@ -18,95 +18,129 @@
 
 
 > **Attention, module currently in active development ⚠️**<br>**Soon to be released, maybe around
- 24 september 2018 🖖**
+ 15 october 2018 🖖**
  
 ## Samples
 Client:
 
-```javascript
+```flow js
 import { RpcClient } from 'amq-rpc';
 
-const client = new RpcClient({
-  service: 'my-awesome-service',
-  version: '1.2',
-  connectParams: {
-    url: 'amqp://guest:guest@localhost:5672/?vhost=/',
-    heartbeat: 30,
-  },
-  waitResponseTimeout: 30 * 1000, // timeout for wait result from service
-});
+(async () => {
+  const client = new RpcClient({
+    service: 'my-awesome-service',
+    version: '1.2',
+    connectParams: {
+      url: 'amqp://guest:guest@localhost:5672/?vhost=/',
+      heartbeat: 30,
+    },
+    waitResponseTimeout: 30 * 1000, // timeout for wait result from service
+  });
 
-await client.ensureConnection(); // accept in first param object as connectParams in constructor
+  await client.ensureConnection(); // accept in first param object as connectParams in constructor
 
-const result = await client.send({ foo: 'bar' }, { correlationId: 'e.g. nginx req id' });
-const result = await client.call('myAction', { foo: 'bar' }, { correlationId: 'e.g. nginx req id'
- });
+  const result = await client.send({ foo: 'bar' }, { correlationId: 'e.g. nginx req id' });
+  const result2 = await client.call('myAction', { foo: 'bar' }, { correlationId: 'e.g. nginx req id' });
 
-await client.destroy();
+  await client.destroy();
+})().catch(err => console.error(err) || process.exit(1));
 ```
 
 Service:
 
-```javascript
-import { RpcClient, RpcServiceHandler } from 'amq-rpc';
+```flow js
+import { RpcService, RpcServiceHandler } from 'amq-rpc';
 
-const service = new RpcService({
-  service: 'my-awesome-service',
-  version: '1.2',
-  connectParams: {
-    url: 'amqp://guest:guest@localhost:5672/?vhost=/',
-    heartbeat: 30,
-  },
-  queue: {
-    prefetch: 1,
-    durable: true,
-    maxPriority: 100,
-  },
-});
+(async () => {
+  const service = new RpcService({
+    service: 'my-awesome-service',
+    version: '1.2',
+    connectParams: {
+      url: 'amqp://guest:guest@localhost:5672/?vhost=/',
+      heartbeat: 30,
+    },
+    queue: {
+      prefetch: 1,
+      durable: true,
+      maxPriority: 100,
+    },
+  });
+  
+  service.setErrorHandler((error) => {
+    // All errors, which can't passed to reject operation (as error in subscriber function,
+    // outside of user handler), will be passed to this callback.
+  });
+  
+  await service.addHandler(class extends RpcServiceHandler {
+    // If in message "type" property didn't fill (send without special options),
+    // service will find handler with action 'default' 
+    get action() {
+      // in base class, RpcServiceHandler, action equal to 'default'
+      return 'myAction2';
+    }
+  
+    async beforeHandle() {
+      // called nearly before handle method
+      // use it for prepare data, init resources or logging
+      // all throwed errors, as in handle method passed to handleFail method
+    }
 
-service.setErrorHandler((error) => {
-  // All errors, which can't passed to reject operation (as error in subscriber function,
-  // outside of user handler), will be passed to this callback.
-});
+    // ⚠️ you must redefine this method from RpcServiceHandler class
+    async handle() {
+      // this.payload - sended payload
+      // this.context - special object, shared between methods. By default equal to {}.
+      // returned data passed to client as reply payload
+      return { bar: 'foo' };
+    }
 
-await service.ensureConnection();
+    // ⚠️ redefine this method only if you know what you do
+    async handleFail(error: Error) {
+      /*
+        In base class, RpcServiceHandler:
+         - reject message in queue
+         - reply to client error with messageId and correlationId
+       */
+      // you can redefine and customize error handling behavior 
+    }
 
-// first argument - payload
-// second - message, see src/AMQPMessage.js 
-await service.setFunctionalHandler(async (receivedPayload, message) => {
-  // returned object send to client and return from call/send method
-  // if error throwed, message will be rejected
-  // so you mustn't manual call ack/reject on message
-  return { bar: 'foo' };
-});
+    // ⚠️ redefine this method only if you know what you do
+    async handleSuccess(replyPayload: Object) {
+      /*
+        In base class, RpcServiceHandler:
+         - ack message in queue
+         - reply to client with payload and error: null
+       */
+      // you can redefine and customize success handling behavior 
+    }
 
-// In this sample to one service added functional handler and class handler together,
-// but in real work it throw error. Service can be only in one "handler mode".
-await service.addHandler(class extends RpcServiceHandler {
-  get action() {
-    return 'myAction';
-  }
+    async onFail(error: Error) {
+      // hook for logging
+    }
 
-  async handle() {
-    // this.payload - sended payload
-    // message, as in functional handler, automatically ack/reject
-    return { foo: 42 };
-  }
-});
+    async onSuccess(replyPayload: Object) {
+      // hook for logging
+    }
 
-await service.addHandler(class extends RpcServiceHandler {
-  // If in message type property didn't fill (send without special options),
-  // service will find 'default' action
-  get action() {
-    return 'default';
-  }
+    async afterHandle(error: ?Error, replyPayload: ?Object) {
+      // if current handler failed, error passed in first argument
+      // if success handling, replyPayload passed as second argument
+      // use it for logging or deinit resouces
+      // wrap this code in try..catch block, because all errors from afterHandle method just 
+      // pass to error handler callback
+    }
+  });
 
-  async handle() {
-    return { bar: 'foo' };
-  }
-});
-
-// If process receive SIGINT, service will be gracefully stopped
-// (wait for handler end work until timeout exceeded and then call for process.exit())
-await service.interventSignalInterceptors({ stopSignal: 'SIGINT', gracefulStopTimeout: 10 * 1000 });
+  // Minimal handler
+  await service.addHandler(class extends RpcServiceHandler {
+    async handle() {
+      return { bar: `${this.payload.foo} 42` };
+    }
+  });
+  
+  await service.ensureConnection();
+  
+  // If process receive SIGINT, service will be gracefully stopped
+  // (wait for handler end work until timeout exceeded and then call for process.exit())
+  await service.interventSignalInterceptors({ stopSignal: 'SIGINT', gracefulStopTimeout: 10 * 1000 });
+})().catch(err => console.error(err) || process.exit(1));
 ```
