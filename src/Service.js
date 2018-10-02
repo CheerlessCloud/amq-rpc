@@ -3,7 +3,8 @@ import EError from 'eerror';
 import type { IMessage } from './AMQPMessage';
 import { type ConnectOptions, type QueueOptions } from './AMQPAdapter';
 import AdapterConsumer from './AdapterConsumer';
-import type { IRpcServiceHandler } from './IRpcServiceHandler';
+import HandlerMap from './rpc/HandlerMap';
+import type { IHandler } from './rpc/IHandler';
 
 type RpcServiceQueueOptions = { ...$Exact<QueueOptions>, prefetch?: number };
 
@@ -15,8 +16,7 @@ type RpcServiceConstructorOptions = {
 };
 
 class RpcService extends AdapterConsumer {
-  // eslint-disable-next-line flowtype/generic-spacing
-  _handlers: Map<string, Class<IRpcServiceHandler>> = new Map();
+  _handlerMap: HandlerMap = new HandlerMap();
   _service: string;
   _version: string;
   _subscribeState: 'uninitiated' | 'functionalHandler' | 'classHandler' = 'uninitiated';
@@ -67,7 +67,7 @@ class RpcService extends AdapterConsumer {
     );
   }
 
-  async _addSubscriber(handler: IMessage => Promise<any> | any) {
+  async _initSubscriber() {
     const adapter = this._getAdapter();
     await adapter.ensureQueue({ name: this.queueName, ...this._queueOptions });
     const { prefetch = 1 } = this._queueOptions || {};
@@ -78,109 +78,76 @@ class RpcService extends AdapterConsumer {
       {
         noAck: false,
       },
-      handler,
+      message => this._messageHandler(message),
     );
   }
 
-  async addHandler(handler: Class<IRpcServiceHandler>) {
-    if (this._subscribeState === 'functionalHandler') {
-      throw new Error('Functional handler already set');
-    }
-
-    const { action } = handler.prototype;
-
-    if (!action) {
-      throw new Error('Handler must implement IRpcServiceHandler interface');
-    }
-
-    if (this._handlers.has(action)) {
-      throw new Error('Handler for this action already set');
-    }
-
-    this._handlers.set(action, handler);
-
-    if (this._subscribeState === 'uninitiated') {
-      await this._addSubscriber(message => this._classMessageHandler(message));
-      this._subscribeState = 'classHandler';
-    }
+  async _onInit() {
+    await this._initSubscriber();
   }
 
-  // @todo merge _classMessageHandler and _functionalMessageHandler and extract to class
-  async _classMessageHandler(message: IMessage): Promise<void> {
-    const { type: action = 'default' } = message._props;
-    const RpcServiceHandler = this._handlers.get(action);
-    const mustRequeue = !message._props.redelivered;
+  async addHandler(handler: Class<IHandler>) {
+    this._handlerMap.add(handler);
+  }
 
-    if (!RpcServiceHandler) {
-      await message.reject(mustRequeue);
+  async _getHandlerClassByMessage(message: IMessage): Promise<?Class<IHandler>> {
+    const { type: action } = message._props;
+    const Handler = this._handlerMap.get(action);
+
+    if (Handler) {
+      return Handler;
+    }
+
+    try {
+      // @todo: retry in other instance
       const error = new EError('Handler for action not found').combine({
         action,
         messageId: message.id,
-        requeue: mustRequeue,
       });
       this._errorHandler(error);
 
-      if (!mustRequeue) {
-        await this._reply(message, null, error);
-      }
-
-      return;
-    }
-
-    let handler = null;
-    try {
-      handler = new RpcServiceHandler({ service: this, message });
-    } catch (err) {
-      await message.reject(mustRequeue);
-      const error = new EError('Error on construct class handler').combine({
-        action,
-        messageId: message.id,
-        requeue: mustRequeue,
-      });
+      await message.reject();
+      await this._reply(message, null, error);
+    } catch (error) {
       this._errorHandler(error);
-      if (!mustRequeue) {
-        await this._reply(message, null, error);
-      }
-      return;
     }
+  }
 
-    let isSuccess = false;
+  async _constructHandler(Handler: Class<IHandler>, message: IMessage): Promise<?IHandler> {
     try {
-      await handler.beforeHandle();
-
-      const replyPayload = await handler.handle();
-
-      await this._reply(message, replyPayload);
-      isSuccess = true;
-
-      await handler.onSuccess();
+      const handler: IHandler = new Handler({ service: this, message });
+      return handler;
     } catch (err) {
-      await this._reply(message, null, err);
-      await handler.onFail(err);
-    } finally {
-      await handler.afterHandle();
-
-      if (message.isSealed) {
-        return; // eslint-disable-line no-unsafe-finally
-      }
-
       try {
-        if (isSuccess) {
-          await message.ack();
-        } else {
-          await message.reject();
-        }
-      } catch (err) {
-        this._errorHandler(
-          EError.wrap(err, {
-            action,
-            messageId: message.id,
-            isSuccess,
-            subMessage: 'Error at message ack/reject',
-          }),
-        );
+        // @todo: review and refactor behavior error on construct handler
+        const error = new EError('Error on construct class handler').combine({
+          action: Handler.prototype.action,
+          messageId: message.id,
+          originalError: err,
+        });
+        this._errorHandler(error);
+        await message.reject();
+        await this._reply(message, null, error);
+      } catch (error) {
+        this._errorHandler(error);
       }
     }
+  }
+
+  async _messageHandler(message: IMessage): Promise<void> {
+    const Handler: ?Class<IHandler> = await this._getHandlerClassByMessage(message);
+
+    if (!Handler) {
+      return;
+    }
+
+    const handler: ?IHandler = await this._constructHandler(Handler, message);
+
+    if (!handler) {
+      return;
+    }
+
+    await handler.execute();
   }
 
   async interventSignalInterceptors({

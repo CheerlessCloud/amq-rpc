@@ -4,7 +4,7 @@ import uuid from 'uuid/v4';
 import EError from 'eerror';
 import RpcClient from '../src/Client';
 import RpcService from '../src/Service';
-import RpcServiceHandler from '../src/RpcServiceHandler';
+import RpcHandler from '../src/rpc/Handler';
 
 test.beforeEach(async t => {
   const ctx = {};
@@ -45,7 +45,7 @@ test('service and client basic integration', async t => {
   const reply = { bar: 'foo' };
 
   await service.addHandler(
-    class extends RpcServiceHandler {
+    class extends RpcHandler {
       async handle() {
         t.deepEqual(this.payload, payload);
         return reply;
@@ -75,7 +75,7 @@ test('send payload to service without wait response', async t => {
   let onHandleExecuted = () => {};
 
   await service.addHandler(
-    class extends RpcServiceHandler {
+    class extends RpcHandler {
       async handle() {
         t.deepEqual(this.payload, payload);
         t.is(sendIsReturnedResult, true);
@@ -109,7 +109,7 @@ test('class-based handler for service', async t => {
   const reply = { bar: 'foo' };
 
   await service.addHandler(
-    class extends RpcServiceHandler {
+    class extends RpcHandler {
       get action() {
         return 'myAction';
       }
@@ -141,7 +141,7 @@ test('correct pass error from service', async t => {
   });
 
   await service.addHandler(
-    class extends RpcServiceHandler {
+    class extends RpcHandler {
       async handle() {
         throw EError.wrap(error, this.payload);
       }
@@ -171,7 +171,7 @@ test('throw error to client on not found action', async t => {
   await service.ensureConnection();
 
   await service.addHandler(
-    class extends RpcServiceHandler {
+    class extends RpcHandler {
       get action() {
         return 'myAction';
       }
