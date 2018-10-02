@@ -38,6 +38,19 @@ test('add and get handlers', async t => {
   t.notThrows(() => t.false(handlerMap.get(action2) === handler1));
 });
 
+test('if action name is empty string, null or undefined return default handler', async t => {
+  const handler1 = t.context.createHandler();
+  const handler2 = t.context.createHandler('action1');
+  const handlerMap = new HandlerMap();
+
+  t.notThrows(() => handlerMap.add(handler1));
+  t.notThrows(() => handlerMap.add(handler2));
+
+  t.is(handlerMap.get(null), handler1);
+  t.is(handlerMap.get(undefined), handler1);
+  t.is(handlerMap.get(''), handler1);
+});
+
 test('throw error on attempt add two handlers with same action', async t => {
   const action = 'action1';
   const handler1 = t.context.createHandler(action);
