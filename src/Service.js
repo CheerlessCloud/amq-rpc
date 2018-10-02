@@ -82,15 +82,6 @@ class RpcService extends AdapterConsumer {
     );
   }
 
-  async setFunctionalHandler(handler: (Object, IMessage) => Promise<any> | any) {
-    if (this._subscribeState !== 'uninitiated') {
-      throw new Error('Handler already set');
-    }
-
-    await this._addSubscriber(message => this._functionalMessageHandler(handler, message));
-    this._subscribeState = 'functionalHandler';
-  }
-
   async addHandler(handler: Class<IRpcServiceHandler>) {
     if (this._subscribeState === 'functionalHandler') {
       throw new Error('Functional handler already set');
@@ -183,37 +174,6 @@ class RpcService extends AdapterConsumer {
         this._errorHandler(
           EError.wrap(err, {
             action,
-            messageId: message.id,
-            isSuccess,
-            subMessage: 'Error at message ack/reject',
-          }),
-        );
-      }
-    }
-  }
-
-  async _functionalMessageHandler(
-    handler: (Object, IMessage) => Promise<any> | any,
-    message: IMessage,
-  ) {
-    let isSuccess = false;
-    try {
-      const { payload } = message;
-      const replyPayload = await handler(payload, message);
-      await this._reply(message, replyPayload);
-      isSuccess = true;
-    } catch (err) {
-      await this._reply(message, null, err);
-    } finally {
-      try {
-        if (isSuccess) {
-          await message.ack();
-        } else {
-          await message.reject();
-        }
-      } catch (err) {
-        this._errorHandler(
-          EError.wrap(err, {
             messageId: message.id,
             isSuccess,
             subMessage: 'Error at message ack/reject',
