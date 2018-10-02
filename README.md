@@ -23,7 +23,7 @@
 ## Samples
 Client:
 
-```flow js
+```javascript
 import { RpcClient } from 'amq-rpc';
 
 (async () => {
@@ -48,7 +48,7 @@ import { RpcClient } from 'amq-rpc';
 
 Service:
 
-```flow js
+```javascript
 import { RpcService, RpcServiceHandler } from 'amq-rpc';
 
 (async () => {
