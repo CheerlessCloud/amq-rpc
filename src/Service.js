@@ -41,6 +41,7 @@ class RpcService extends AdapterConsumer {
     this._setConnectParams(connectParams);
   }
 
+  // @todo plz kill me, sir! Duplicate in AMQPMessage
   async _reply(message: IMessage, payload: ?Object = null, error: ?Error = null) {
     const { messageId, correlationId, replyTo } = message._props;
     if (!replyTo) {
