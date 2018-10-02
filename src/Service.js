@@ -19,7 +19,6 @@ class RpcService extends AdapterConsumer {
   _handlerMap: HandlerMap = new HandlerMap();
   _service: string;
   _version: string;
-  _subscribeState: 'uninitiated' | 'functionalHandler' | 'classHandler' = 'uninitiated';
   _queueOptions: ?RpcServiceQueueOptions = { durable: true };
 
   get service(): string {
