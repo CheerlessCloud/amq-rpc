@@ -189,3 +189,38 @@ test('throw error to client on not found action', async t => {
 
   await t.throws(client.call('undefinedAction', { foo: '42' }), 'Handler for action not found');
 });
+
+test('catch error throwed in handler constructor', async t => {
+  t.plan(2);
+  const { client, service } = t.context;
+
+  await client.ensureConnection();
+  await service.ensureConnection();
+
+  await service.addHandler(
+    class extends RpcHandler {
+      constructor() {
+        super('');
+        throw new Error('Boom!');
+      }
+
+      get action() {
+        return 'myAction';
+      }
+
+      async handle() {
+        t.fail("hmmm, it's impossible!");
+      }
+
+      async execute() {
+        t.fail("hmmm, it's impossible!");
+      }
+    },
+  );
+
+  service.setErrorHandler(err => {
+    t.is(err.message, 'Error on construct class handler');
+  });
+
+  await t.throws(client.call('myAction', { foo: '42' }), 'Error on construct class handler');
+});
