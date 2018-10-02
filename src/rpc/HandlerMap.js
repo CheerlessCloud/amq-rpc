@@ -25,7 +25,7 @@ export default class HandlerMap {
     this._map.set(action, handler);
   }
 
-  get(action: string): ?Class<IHandler> {
-    return this._map.get(action);
+  get(action: ?string): ?Class<IHandler> {
+    return this._map.get(action || 'default');
   }
 }
