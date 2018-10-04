@@ -256,24 +256,29 @@ class AMQPAdapter {
   }
 
   async disconnect({ gracefulStopTimeout = 10000 }: { gracefulStopTimeout?: number } = {}) {
-    this._state = 'disconnecting';
-
-    // @todo in wait end time reject with requeue all messages or unsubscribe
-    // but how we can ack is this situation?
-    if (gracefulStopTimeout > 0) {
-      try {
-        await this._waitEndHandlers(gracefulStopTimeout);
-      } catch (err) {
-        this._errorHandler(
-          EError.wrap(err, {
-            gracefulStopTimeout,
-            subMessage: 'Error at graceful disconnect',
-          }),
-        );
-      }
+    if (!['connecting', 'connected', 'blocked'].includes(this._state)) {
+      return;
     }
 
-    await this._connection.close();
+    this._state = 'disconnecting';
+
+    if (gracefulStopTimeout <= 0) {
+      await this._connection.close();
+      return;
+    }
+
+    try {
+      await this._waitEndHandlers(gracefulStopTimeout);
+    } catch (err) {
+      this._errorHandler(
+        EError.wrap(err, {
+          gracefulStopTimeout,
+          subMessage: 'Error at graceful disconnect',
+        }),
+      );
+    } finally {
+      await this._connection.close();
+    }
   }
 
   async _waitEndHandlers(gracefulStopTimeout: number) {
