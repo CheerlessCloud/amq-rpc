@@ -15,7 +15,12 @@ import pEvent from 'p-event';
 import EError from 'eerror';
 import AMQPMessage, { type IMessage } from './AMQPMessage';
 
-type AMQPAdapterEventBusPossibleEvent = 'lock' | 'unlock' | 'bufferOverflow' | 'endHandle';
+type AMQPAdapterEventBusPossibleEvent =
+  | 'lock'
+  | 'unlock'
+  | 'bufferOverflow'
+  | 'endHandle'
+  | 'disconnect';
 type AMQPAdapterEventBus = {
   ...EventEmitter,
   on(AMQPAdapterEventBusPossibleEvent, (reason: string) => mixed): void,
@@ -79,11 +84,6 @@ class AMQPAdapter {
 
   _mountEventHandlers() {
     // @todo check correctness of using on/once for this events
-    this._connection.on('close', () => {
-      this._state = 'disconnected';
-      this._eventBus.emit('lock', 'connectionClosed');
-    });
-
     this._connection.on('blocked', () => {
       this._state = 'blocked';
       this._eventBus.emit('lock', 'blocked');
@@ -104,8 +104,25 @@ class AMQPAdapter {
       this._eventBus.emit('unlock', 'drain');
     });
 
-    this._channel.on('close', () => {
+    this._connection.on('close', () => {
+      const lastState = this._state;
       this._state = 'disconnected';
+
+      if (['connecting', 'connected', 'blocked'].includes(lastState)) {
+        this._eventBus.emit('disconnect', 'connectionClosed');
+      }
+
+      this._eventBus.emit('lock', 'connectionClosed');
+    });
+
+    this._channel.on('close', () => {
+      const lastState = this._state;
+      this._state = 'disconnected';
+
+      if (['connecting', 'connected', 'blocked'].includes(lastState)) {
+        this._eventBus.emit('disconnect', 'channelClosed');
+      }
+
       this._eventBus.emit('lock', 'channelClosed');
     });
 
