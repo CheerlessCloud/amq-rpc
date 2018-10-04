@@ -2,6 +2,7 @@
 import test from 'ava';
 import uuid from 'uuid/v4';
 import EError from 'eerror';
+import { stub } from 'sinon';
 import RpcClient from '../src/Client';
 import RpcService from '../src/Service';
 import RpcHandler from '../src/rpc/Handler';
@@ -37,13 +38,13 @@ test.beforeEach(async t => {
 test.afterEach(async t => {
   const { client, service } = t.context;
 
-  if (service.destroy) {
+  try {
     await service.destroy();
-  }
+  } catch (err) {} // eslint-disable-line no-empty
 
-  if (client.destroy) {
+  try {
     await client.destroy();
-  }
+  } catch (err) {} // eslint-disable-line no-empty
 });
 
 test('service and client basic integration', async t => {
@@ -223,4 +224,33 @@ test('catch error throwed in handler constructor', async t => {
   });
 
   await t.throws(client.call('myAction', { foo: '42' }), 'Error on construct class handler');
+});
+
+test('service shutdown process on break connection with interventSignalInterceptors', async t => {
+  t.plan(2);
+  const { service } = t.context;
+
+  await service.addHandler(
+    class extends RpcHandler {
+      async handle() {} // eslint-disable-line no-empty-function
+    },
+  );
+
+  await service.ensureConnection();
+
+  await service.interventSignalInterceptors({
+    stopSignal: 'SIGINT',
+    gracefulStopTimeout: 1000,
+  });
+
+  service.setErrorHandler(err => t.is(err.message, 'ECONNRESET'));
+  const processExitStub = stub(global.process, 'exit');
+
+  service._adapter._channel.connection.stream.destroy(new Error('ECONNRESET'));
+
+  await new Promise(resolve => setTimeout(() => resolve(), 100));
+
+  t.true(processExitStub.calledOnceWith(0));
+
+  processExitStub.restore();
 });
