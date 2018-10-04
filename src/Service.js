@@ -154,7 +154,13 @@ class RpcService extends AdapterConsumer {
     stopSignal = 'SIGINT',
     gracefulStopTimeout = 60 * 1000,
   }: { stopSignal?: string, gracefulStopTimeout?: number } = {}) {
+    let shutdownInProcess = false;
     const endCallback = async () => {
+      if (shutdownInProcess) {
+        return;
+      }
+      shutdownInProcess = true;
+
       try {
         await this.destroy({ gracefulStopTimeout });
         process.exit(0);
@@ -170,6 +176,10 @@ class RpcService extends AdapterConsumer {
     };
 
     process.once(stopSignal, endCallback);
+
+    const adapter = this._getAdapter();
+    // @todo exit with status 0
+    adapter._eventBus.once('disconnect', endCallback);
   }
 }
 
