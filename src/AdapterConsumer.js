@@ -44,8 +44,12 @@ export default class AdapterConsumer {
     const options = mergeConnectParams(connectParams, this._connectParams);
 
     this._connectPromise = AMQPAdapter.connect(options);
-    this._adapter = await this._connectPromise;
-    this._connectPromise = null;
+
+    try {
+      this._adapter = await this._connectPromise;
+    } finally {
+      this._connectPromise = null;
+    }
 
     this._adapter._errorHandler = this._errorHandler;
     await this._onInit();
