@@ -10,6 +10,7 @@ export default class AdapterConsumer {
   _adapter: ?_AMQPAdapter;
   _connectParams: _ConnectOptions;
   _errorHandler: Error => mixed = err => console.error(err);
+  _connectPromise: ?Promise<AMQPAdapter> = null;
 
   _getAdapter(): AMQPAdapter {
     if (!this._adapter) {
@@ -35,11 +36,18 @@ export default class AdapterConsumer {
       return;
     }
 
+    if (this._connectPromise) {
+      await this._connectPromise;
+      return;
+    }
+
     const options = mergeConnectParams(connectParams, this._connectParams);
 
-    this._adapter = await AMQPAdapter.connect(options);
-    this._adapter._errorHandler = this._errorHandler;
+    this._connectPromise = AMQPAdapter.connect(options);
+    this._adapter = await this._connectPromise;
+    this._connectPromise = null;
 
+    this._adapter._errorHandler = this._errorHandler;
     await this._onInit();
     return this;
   }
