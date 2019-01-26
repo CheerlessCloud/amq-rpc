@@ -7,35 +7,47 @@ export type MessageProps = {
 };
 
 export interface IMessage {
-  +id: ?string;
+  +id: string;
   +correlationId: ?string;
   +payload: Object;
   +isSealed: boolean;
   +headers: Map<string, mixed>;
   +isAnswerQueueEnabled: boolean;
-  +_props: MessageProps;
-  constructor(amqpMessage: CommonAMQPMessage, channel: AMQPChannel): IMessage;
+  +sourceQueue: string;
+  +applicationLevelRetryLimit: null | number;
+  +isApplicationLevelRetryEnabled: boolean;
+  // constructor(
+  //   amqpMessage: CommonAMQPMessage,
+  //   channel: AMQPChannel,
+  //   sourceQueue: string,
+  //   isSealed: ?boolean,
+  // ): IMessage;
   getPayloadAsObject(encoding?: buffer$NonBufferEncoding): Object;
   getPayloadAsString(encoding?: buffer$NonBufferEncoding): string;
   getPayloadAsBuffer(): Buffer;
-  ack(): Promise<void>;
-  reject(requeue: ?boolean): Promise<void>;
-  rejectAndRequeue(): Promise<void>;
+  setApplicationLevelRetryLimit(number | string): void;
 }
 
 export default class AMQPMessage implements IMessage {
   _channel: AMQPChannel;
   _amqpMessage: CommonAMQPMessage;
   _isSealed: boolean = false;
+  _sourceQueue: string;
 
-  constructor(amqpMessage: CommonAMQPMessage, channel: AMQPChannel, isSealed: ?boolean): IMessage {
+  constructor(
+    amqpMessage: CommonAMQPMessage,
+    channel: AMQPChannel,
+    sourceQueue: string,
+    isSealed: ?boolean,
+  ): IMessage {
     this._channel = channel;
     this._amqpMessage = amqpMessage;
     this._isSealed = isSealed || false;
+    this._sourceQueue = sourceQueue;
     return this;
   }
 
-  get id(): ?string {
+  get id(): string {
     return this._amqpMessage.properties.messageId;
   }
 
@@ -51,8 +63,33 @@ export default class AMQPMessage implements IMessage {
     return this._isSealed;
   }
 
-  get _props(): MessageProps {
+  get sourceQueue(): string {
+    return this._sourceQueue;
+  }
+
+  get props(): MessageProps {
     return { ...this._amqpMessage.properties, ...this._amqpMessage.fields };
+  }
+
+  get headers(): Map<string, mixed> {
+    return new Map(Object.entries(this._amqpMessage.properties.headers));
+  }
+
+  get isAnswerQueueEnabled(): boolean {
+    return !!this._amqpMessage.properties.replyTo;
+  }
+
+  get applicationLevelRetryLimit(): null | number {
+    const retryLimitHeader = this.headers.get('X-Retry-Limit');
+    return ![null, undefined].includes(retryLimitHeader) ? Number(retryLimitHeader) : null;
+  }
+
+  get isApplicationLevelRetryEnabled(): boolean {
+    return typeof this.applicationLevelRetryLimit === 'number';
+  }
+
+  setApplicationLevelRetryLimit(value: number | string): void {
+    this._amqpMessage.properties.headers['X-Retry-Limit'] = String(value);
   }
 
   getPayloadAsObject(encoding?: buffer$NonBufferEncoding): Object {
@@ -72,15 +109,7 @@ export default class AMQPMessage implements IMessage {
     return this._amqpMessage.content;
   }
 
-  get headers(): Map<string, mixed> {
-    return new Map(Object.entries(this._amqpMessage.properties.headers));
-  }
-
-  get isAnswerQueueEnabled(): boolean {
-    return !!this._amqpMessage.properties.replyTo;
-  }
-
-  _checkIsSealed() {
+  checkIsSealed() {
     if (!this._isSealed) {
       return;
     }
@@ -88,28 +117,8 @@ export default class AMQPMessage implements IMessage {
     throw new Error('Message already acked/rejected or created in sealed mode');
   }
 
-  async ack() {
-    this._checkIsSealed();
-    await this._forceAck();
-  }
-
-  async reject(requeue: ?boolean = false) {
-    this._checkIsSealed();
-    await this._forceReject(requeue);
-  }
-
-  async _forceAck() {
-    this._channel.ack(this._amqpMessage);
+  toSeal() {
+    this.checkIsSealed();
     this._isSealed = true;
-  }
-
-  async _forceReject(requeue: ?boolean = false) {
-    this._channel.reject(this._amqpMessage, !!requeue);
-    this._isSealed = true;
-  }
-
-  async rejectAndRequeue(): Promise<void> {
-    this._checkIsSealed();
-    await this._forceReject(true);
   }
 }

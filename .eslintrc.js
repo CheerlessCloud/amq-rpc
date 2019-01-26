@@ -37,6 +37,7 @@ module.exports = {
     "no-underscore-dangle": "off",
     "class-methods-use-this": "off",
     "import/no-named-as-default-member": "off",
+    "no-console": "error",
   },
   "plugins": [
     "flowtype",

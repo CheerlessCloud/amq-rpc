@@ -5,6 +5,7 @@ import { type ConnectOptions, type QueueOptions } from './AMQPAdapter';
 import AdapterConsumer from './AdapterConsumer';
 import HandlerMap from './rpc/HandlerMap';
 import type { IHandler } from './rpc/IHandler';
+import AMQPMessageRpcController from './AMQPMessageRpcController';
 
 type RpcServiceQueueOptions = { ...$Exact<QueueOptions>, prefetch?: number };
 
@@ -41,30 +42,11 @@ class RpcService extends AdapterConsumer {
     this._setConnectParams(connectParams);
   }
 
-  // @todo plz kill me, sir! Duplicate in AMQPMessage
-  async _reply(message: IMessage, payload: ?Object = null, error: ?Error = null) {
-    const { messageId, correlationId, replyTo } = message._props;
-    if (!replyTo) {
-      return;
-    }
-
-    let errorObj = null;
-    if (error) {
-      errorObj = {};
-      Object.getOwnPropertyNames(error).forEach(key => {
-        (errorObj: any)[key] = (error: any)[key];
-      });
-    }
-
-    const adapter = this._getAdapter();
-    await adapter.send(
-      replyTo,
-      {
-        error: errorObj,
-        payload,
-      },
-      { messageId, correlationId },
-    );
+  async _replyError(message: IMessage, error: Error) {
+    // $FlowFixMe
+    const messageController = new AMQPMessageRpcController(message, this);
+    await messageController.reject();
+    await messageController.reply({ payload: null, error });
   }
 
   async _initSubscriber() {
@@ -91,7 +73,8 @@ class RpcService extends AdapterConsumer {
   }
 
   async _getHandlerClassByMessage(message: IMessage): Promise<?Class<IHandler>> {
-    const { type: action } = message._props;
+    // $FlowFixMe
+    const { type: action } = message.props;
     const Handler = this._handlerMap.get(action);
 
     if (Handler) {
@@ -106,8 +89,7 @@ class RpcService extends AdapterConsumer {
       });
       this._errorHandler(error);
 
-      await message.reject();
-      await this._reply(message, null, error);
+      await this._replyError(message, error);
     } catch (error) {
       this._errorHandler(error);
     }
@@ -126,8 +108,8 @@ class RpcService extends AdapterConsumer {
           originalError: err,
         });
         this._errorHandler(error);
-        await message.reject();
-        await this._reply(message, null, error);
+
+        await this._replyError(message, error);
       } catch (error) {
         this._errorHandler(error);
       }
