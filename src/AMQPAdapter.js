@@ -58,6 +58,8 @@ class AMQPAdapter {
   _state: _State = 'idle';
   _eventBus: AMQPAdapterEventBus = (new EventEmitter(): any);
   _inflightHandlers: number = 0;
+  // @todo: add normal logger injection
+  // eslint-disable-next-line no-console
   _errorHandler: Error => mixed = err => console.error(err);
   _activeConsumers: string[] = [];
 
@@ -224,7 +226,7 @@ class AMQPAdapter {
 
         this._inflightHandlers += 1;
         try {
-          const message = new AMQPMessage(originalMessage, this._channel);
+          const message = new AMQPMessage(originalMessage, this._channel, queue);
           await (handler: any)(message);
         } catch (err) {
           this._errorHandler(

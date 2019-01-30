@@ -29,7 +29,7 @@ test('correct ack message after unsubscribe', async t => {
   await adapter.subscribe(queue, async msg => {
     try {
       await adapter._unsubscribeAll();
-      await msg.ack();
+      await msg._channel.ack(msg._amqpMessage);
       t.pass('message correctly acked after unsubscribe');
     } catch (err) {
       t.fail(err);

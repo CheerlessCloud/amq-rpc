@@ -39,6 +39,7 @@ type RpcClientConstructorOptions = {
   connectParams?: ConnectOptions,
   service: string,
   version: string,
+  defaultRetryLimit?: number,
   waitResponseTimeout?: number,
 };
 
@@ -51,6 +52,7 @@ type RpcClientSendOptions = {
   +headers?: Object,
   +correlationId?: string,
   +type?: string,
+  +retryLimit?: number,
   waitResponseTimeout?: number,
 };
 
@@ -61,6 +63,7 @@ class RpcClient extends AdapterConsumer {
   _version: string;
   _replyQueueName: string = '';
   _waitResponseTimeout: ?number;
+  _defaultRetryLimit: ?number;
 
   get service(): string {
     return this._service;
@@ -79,12 +82,14 @@ class RpcClient extends AdapterConsumer {
     service,
     version,
     waitResponseTimeout,
+    defaultRetryLimit,
   }: RpcClientConstructorOptions) {
     super();
     this._service = service;
     this._version = version;
     this._waitResponseTimeout = waitResponseTimeout;
     this._setConnectParams(connectParams);
+    this._defaultRetryLimit = defaultRetryLimit;
   }
 
   async _onInit() {
@@ -154,12 +159,29 @@ class RpcClient extends AdapterConsumer {
     await this._sendMessage(messageId, payload, options);
   }
 
+  _getRetryLimitHeaders(options: ?RpcClientSendOptions = {}) {
+    const retryLimit =
+      (options || {}).retryLimit === undefined
+        ? this._defaultRetryLimit
+        : (options || {}).retryLimit;
+
+    if ([null, undefined].includes(retryLimit)) {
+      return {};
+    }
+
+    return { 'X-Retry-Limit': retryLimit };
+  }
+
   async _sendMessage(messageId: string, payload: Object, options: ?RpcClientSendOptions) {
     const adapter = this._getAdapter();
 
     // @todo check is queue exist before send
     await adapter.send(this.queueName, payload, {
       ...options,
+      headers: {
+        ...(options || {}).headers,
+        ...this._getRetryLimitHeaders(options),
+      },
       messageId,
       replyTo: this._replyQueueName,
       timestamp: Date.now(),

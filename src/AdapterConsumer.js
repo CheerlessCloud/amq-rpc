@@ -9,6 +9,8 @@ opaque type _ConnectOptions = ConnectOptions;
 export default class AdapterConsumer {
   _adapter: ?_AMQPAdapter;
   _connectParams: _ConnectOptions;
+  // @todo: add normal logger injection
+  // eslint-disable-next-line no-console
   _errorHandler: Error => mixed = err => console.error(err);
   _connectPromise: ?Promise<AMQPAdapter> = null;
 

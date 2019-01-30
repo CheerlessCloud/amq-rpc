@@ -18,8 +18,8 @@
 
 
 > **Attention, module currently in active development ⚠️**<br>**Soon to be released, maybe around
- 15 october 2018 🖖**
- 
+ 30 february 2019 🖖**
+
 ## Samples
 Client:
 
@@ -35,12 +35,20 @@ import { RpcClient } from 'amq-rpc';
       heartbeat: 30,
     },
     waitResponseTimeout: 30 * 1000, // timeout for wait result from service
+    defaultRetryLimit: 10 // retry limit, by default retry 1 (disabled)
   });
 
   await client.ensureConnection(); // accept in first param object as connectParams in constructor
 
-  const result = await client.send({ foo: 'bar' }, { correlationId: 'e.g. nginx req id' });
-  const result2 = await client.call('myAction', { foo: 'bar' }, { correlationId: 'e.g. nginx req id' });
+  // equal to call 'default' handler
+  const result = await client.send({ foo: 'bar' }, {
+    correlationId: 'e.g. nginx req id',
+    retryLimit: 5, // override default from constructor
+  });
+  const result2 = await client.call('myAction', { foo: 'bar' }, {
+    correlationId: 'e.g. nginx req id',
+    retryLimit: 5, // override default from constructor
+  });
 
   await client.destroy();
 })().catch(err => console.error(err) || process.exit(1));
@@ -65,20 +73,20 @@ import { RpcService, RpcServiceHandler } from 'amq-rpc';
       maxPriority: 100,
     },
   });
-  
+
   service.setErrorHandler((error) => {
     // All errors, which can't passed to reject operation (as error in subscriber function,
     // outside of user handler), will be passed to this callback.
   });
-  
+
   await service.addHandler(class extends RpcServiceHandler {
     // If in message "type" property didn't fill (send without special options),
-    // service will find handler with action 'default' 
+    // service will find handler with action 'default'
     get action() {
       // in base class, RpcServiceHandler, action equal to 'default'
       return 'myAction2';
     }
-  
+
     async beforeHandle() {
       // called nearly before handle method
       // use it for prepare data, init resources or logging
@@ -97,10 +105,14 @@ import { RpcService, RpcServiceHandler } from 'amq-rpc';
     async handleFail(error: Error) {
       /*
         In base class, RpcServiceHandler:
-         - reject message in queue
-         - reply to client error with messageId and correlationId
+         - if retry disabled or retry limit exceeded
+          - reject message in queue
+          - reply to client error with messageId and correlationId
+         - else
+          - ack currect message
+          - resend message to source queue with decremented retry limit header
        */
-      // you can redefine and customize error handling behavior 
+      // you can redefine and customize error handling behavior
     }
 
     // ⚠️ redefine this method only if you know what you do
@@ -110,7 +122,7 @@ import { RpcService, RpcServiceHandler } from 'amq-rpc';
          - ack message in queue
          - reply to client with payload and error: null
        */
-      // you can redefine and customize success handling behavior 
+      // you can redefine and customize success handling behavior
     }
 
     async onFail(error: Error) {
@@ -125,7 +137,7 @@ import { RpcService, RpcServiceHandler } from 'amq-rpc';
       // if current handler failed, error passed in first argument
       // if success handling, replyPayload passed as second argument
       // use it for logging or deinit resouces
-      // wrap this code in try..catch block, because all errors from afterHandle method just 
+      // wrap this code in try..catch block, because all errors from afterHandle method just
       // pass to error handler callback
     }
   });
@@ -136,9 +148,9 @@ import { RpcService, RpcServiceHandler } from 'amq-rpc';
       return { bar: `${this.payload.foo} 42` };
     }
   });
-  
+
   await service.ensureConnection();
-  
+
   // If process receive SIGINT, service will be gracefully stopped
   // (wait for handler end work until timeout exceeded and then call for process.exit())
   await service.interventSignalInterceptors({ stopSignal: 'SIGINT', gracefulStopTimeout: 10 * 1000 });
