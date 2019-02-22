@@ -83,6 +83,45 @@ test('should return result when tho fails and one success handle', async t => {
   t.is(handlerCounter, 3);
 });
 
+test('should return result when tho fails and one success custom action handle', async t => {
+  t.plan(10);
+  const { client, service } = t.context;
+
+  const payload = { foo: 'bar' };
+  const reply = { bar: 'foo' };
+  let handlerCounter = 0;
+
+  await service.addHandler(
+    class extends RpcHandler {
+      get action() {
+        return 'awesomeAction';
+      }
+
+      async handle() {
+        handlerCounter += 1;
+        t.deepEqual(this.payload, payload);
+        if (handlerCounter < 3) {
+          throw new Error('Some handler error');
+        }
+        return reply;
+      }
+
+      onFail(err) {
+        t.truthy('on fail called twice');
+        t.is(err.message, 'Some handler error');
+      }
+
+      onSuccess() {
+        t.truthy('on success called once');
+      }
+    },
+  );
+
+  const callResult = await client.call('awesomeAction', payload);
+  t.deepEqual(callResult, reply);
+  t.is(handlerCounter, 3);
+});
+
 test('should correct return error to client when retry limit exceeded', async t => {
   t.plan(8);
   const { client, service } = t.context;
