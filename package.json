@@ -30,12 +30,12 @@
     "precommit": "lint-staged"
   },
   "dependencies": {
-    "amqplib": "^0.5.2",
-    "eerror": "^2.0.0",
-    "lodash.merge": "^4.6.1",
-    "p-event": "^2.1.0",
-    "p-timeout": "^2.0.1",
-    "uuid": "^3.3.2"
+    "amqplib": "^0.5.5",
+    "eerror": "^3.0.0",
+    "lodash.merge": "^4.6.2",
+    "p-event": "^4.1.0",
+    "p-timeout": "^3.2.0",
+    "uuid": "^3.4.0"
   },
   "devDependencies": {
     "ava": "^0.25.0",
