@@ -1,5 +1,10 @@
-sudo: false
+dist: bionic
 language: node_js
+
+addons:
+  apt:
+    packages:
+    - rabbitmq-server
 services:
   - rabbitmq
 
